@@ -44,7 +44,7 @@ describe("Pair API", () => {
         token1Id: tokenB.id
       });
 
-    expect(res.statusCode).toBe(200);
+    expect(res.statusCode).toBe(201);
     expect(res.body).toHaveProperty("id");
     expect(res.body.token0Id).toBe(tokenA.id);
     expect(res.body.token1Id).toBe(tokenB.id);
