@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "jest",
-    "dev": "nodemon src/index.js"
+    "dev": "nodemon src/index.js",
+    "test": "set NODE_ENV=test && jest --runInBand"
   },
   "keywords": [],
   "author": "",
