@@ -1,3 +1,4 @@
+//require("dotenv").config({ path: ".env.test" });
 const prisma = require("../services/db.service");
 const request = require("supertest");
 const app = require("../index"); // we’ll need to export app in index.js

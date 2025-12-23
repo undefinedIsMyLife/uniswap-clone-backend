@@ -1,3 +1,4 @@
+//require("dotenv").config({ path: ".env.test" });
 const request = require("supertest");
 const app = require("../index");
 const prisma = require("../services/db.service");
@@ -7,6 +8,7 @@ let tokenB;
 
 beforeAll(async () => {
   // Clean previous test pairs
+  await prisma.swap.deleteMany({});
   await prisma.pair.deleteMany({});
   await prisma.token.deleteMany({
     where: { symbol: { startsWith: "TEST_" } }
