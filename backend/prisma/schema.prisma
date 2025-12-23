@@ -37,13 +37,15 @@ model Pair {
   token0Id  Int
   token1    Token    @relation("Token1", fields: [token1Id], references: [id])
   token1Id  Int
-  reserve0  Float    @default(0)
-  reserve1  Float    @default(0)
+
+  reserve0  Decimal  @default(0) @db.Decimal(36, 18)
+  reserve1  Decimal  @default(0) @db.Decimal(36, 18)
+
   swaps     Swap[]
   liquidity Liquidity[]
   createdAt DateTime @default(now())
 
-   @@unique([token0Id, token1Id])
+  @@unique([token0Id, token1Id])
 }
 
 model Swap {
@@ -52,10 +54,13 @@ model Swap {
   userId    Int
   pair      Pair     @relation(fields: [pairId], references: [id])
   pairId    Int
-  amountIn  Float
-  amountOut Float
-  tokenIn   Int
-  tokenOut  Int
+
+  amountIn  Decimal  @db.Decimal(36, 18)
+  amountOut Decimal  @db.Decimal(36, 18)
+
+  tokenInId  Int
+  tokenOutId Int
+
   createdAt DateTime @default(now())
 }
 
@@ -65,21 +70,10 @@ model Liquidity {
   userId    Int
   pair      Pair     @relation(fields: [pairId], references: [id])
   pairId    Int
-  amount0   Float
-  amount1   Float
+
+  amount0   Decimal  @db.Decimal(36, 18)
+  amount1   Decimal  @db.Decimal(36, 18)
+
   createdAt DateTime @default(now())
 }
 
-model SwapEvent {
-  id        Int
-  pairId    Int
-  amountIn  Decimal
-  amountOut Decimal
-  createdAt DateTime
-}
-
-model LiquidityEvent {
-  id      Int
-  pairId  Int
-  type    LiquidityType
-}
