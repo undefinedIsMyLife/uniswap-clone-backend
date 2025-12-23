@@ -1,72 +1,85 @@
 const prisma = require("./db.service");
+const { Decimal } = require("@prisma/client/runtime/library");
 
-// AMM Swap Logic (x * y = k)
+const FEE_RATE = new Decimal("0.003"); // 0.3%
+
 async function executeSwap(userId, pairId, amountIn, tokenIn) {
+  const amountInDec = new Decimal(amountIn);
 
-  const pair = await prisma.pair.findUnique({
-    where: { id: pairId }
-  });
-
-  if (!pair) return { error: "PAIR_NOT_FOUND" };
-
-  const user = await prisma.user.findUnique({
-    where: { id: userId }
-  });
-
-  if (!user) return { error: "USER_NOT_FOUND" };
-
-  let reserveIn, reserveOut, tokenOut;
-
-  // tokenIn = 0 → swap token0 → token1
-  if (tokenIn === 0) {
-    reserveIn = pair.reserve0;
-    reserveOut = pair.reserve1;
-    tokenOut = 1;
-  }
-  // tokenIn = 1 → swap token1 → token0
-  else if (tokenIn === 1) {
-    reserveIn = pair.reserve1;
-    reserveOut = pair.reserve0;
-    tokenOut = 0;
-  } else {
-    return { error: "INVALID_TOKEN_DIRECTION" };
+  if (amountInDec.lte(0)) {
+    return { error: "INVALID_AMOUNT" };
   }
 
-  if (amountIn <= 0) return { error: "INVALID_AMOUNT" };
+  return prisma.$transaction(async (tx) => {
+    const pair = await tx.pair.findUnique({
+      where: { id: pairId }
+    });
 
-  // AMM formula: amountOut = (reserveOut * amountIn) / (reserveIn + amountIn)
-  const amountOut = (reserveOut * amountIn) / (reserveIn + amountIn);
+    if (!pair) return { error: "PAIR_NOT_FOUND" };
 
-  if (amountOut <= 0) return { error: "SWAP_FAILED" };
+    const user = await tx.user.findUnique({
+      where: { id: userId }
+    });
 
-  // Update reserves
-  const updatedPair = await prisma.pair.update({
-    where: { id: pairId },
-    data: {
-      reserve0:
-        tokenIn === 0
-          ? reserveIn + amountIn
-          : reserveOut - amountOut,
-      reserve1:
-        tokenIn === 1
-          ? reserveIn + amountIn
-          : reserveOut - amountOut
+    if (!user) return { error: "USER_NOT_FOUND" };
+
+    let reserveIn, reserveOut;
+    let reserve0 = new Decimal(pair.reserve0);
+    let reserve1 = new Decimal(pair.reserve1);
+
+    if (tokenIn === 0) {
+      reserveIn = reserve0;
+      reserveOut = reserve1;
+    } else if (tokenIn === 1) {
+      reserveIn = reserve1;
+      reserveOut = reserve0;
+    } else {
+      return { error: "INVALID_TOKEN_DIRECTION" };
     }
-  });
 
-  // Save swap history
-  const swap = await prisma.swap.create({
-    data: {
-      userId,
-      pairId,
-      amountIn,
-      amountOut,
-      tokenIn,
-      tokenOut
+    // amountIn after fee
+    const amountInWithFee = amountInDec.mul(
+      new Decimal(1).minus(FEE_RATE)
+    );
+
+    // AMM formula
+    const amountOut = reserveOut.mul(amountInWithFee)
+      .div(reserveIn.add(amountInWithFee));
+
+    if (amountOut.lte(0)) {
+      return { error: "SWAP_FAILED" };
     }
-  });
 
-  return { swap, updatedPair };
+    // Update reserves correctly
+    if (tokenIn === 0) {
+      reserve0 = reserve0.add(amountInDec);
+      reserve1 = reserve1.sub(amountOut);
+    } else {
+      reserve1 = reserve1.add(amountInDec);
+      reserve0 = reserve0.sub(amountOut);
+    }
+
+    const updatedPair = await tx.pair.update({
+      where: { id: pairId },
+      data: {
+        reserve0,
+        reserve1
+      }
+    });
+
+    const swap = await tx.swap.create({
+      data: {
+        userId,
+        pairId,
+        amountIn: amountInDec,
+        amountOut,
+        tokenInId: tokenIn,
+        tokenOutId: tokenIn === 0 ? 1 : 0
+      }
+    });
+
+    return { swap, updatedPair };
+  });
 }
 
 module.exports = { executeSwap };
