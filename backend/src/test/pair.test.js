@@ -9,6 +9,7 @@ let tokenB;
 beforeAll(async () => {
   // Clean previous test pairs
   await prisma.swap.deleteMany({});
+  await prisma.liquidity.deleteMany({});
   await prisma.pair.deleteMany({});
   await prisma.token.deleteMany({
     where: { symbol: { startsWith: "TEST_" } }

@@ -29,8 +29,10 @@ async function addLiquidity(req, res) {
     if (result.error === "PAIR_NOT_FOUND") {
       return res.status(400).json({ error: "Pair does not exist" });
     }
-
-    res.json(result);
+    if (result.error) {
+      return res.status(400).json({ error: result.error });
+    }
+    res.status(200).json(result);
 
   } catch (error) {
     console.error("Error adding liquidity:", error);
@@ -48,4 +50,32 @@ async function getLiquidity(req, res) {
   }
 }
 
-module.exports = { addLiquidity, getLiquidity };
+async function removeLiquidity(req, res) {
+  try {
+    const {userId, liquidityId } = req.body;
+    
+    //Validate input 
+    if (!userId || !liquidityId) {
+      return res.status(400).json({
+        error: "userId and liquidityId are required"
+      });
+    }
+
+    // Call service
+    const result = await liquidityService.removeLiquidity(
+      userId,
+      liquidityId
+    );
+
+    if (result.error) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    return res.json(result);
+
+  } catch (error) {
+    console.error("Error removing liquidity:", error);
+    res.status(500).json({ error: "Failed to remove liquidity" });
+  }
+}
+module.exports = { addLiquidity, getLiquidity, removeLiquidity };
