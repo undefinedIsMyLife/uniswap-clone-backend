@@ -2,6 +2,8 @@ const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const { PrismaClient } = require("@prisma/client");
+const swaggerUi = require("swagger-ui-express");
+const swaggerSpec = require("./swagger");
 
 dotenv.config();
 const app = express();
@@ -31,10 +33,10 @@ app.use("/users", userRoutes);
 const swapRoutes = require("./routes/swap.routes");
 app.use("/swap", swapRoutes);
 
-
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 if (require.main === module) {
-  const PORT = process.env.PORT || 4000;
+  const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => console.log(`✅ Server running on http://localhost:${PORT}`));
 }
 

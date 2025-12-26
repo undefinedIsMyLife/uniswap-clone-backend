@@ -2,16 +2,16 @@ const swapService = require("../services/swap.service");
 
 async function swapTokens(req, res) {
   try {
-    const { userId, pairId, amountIn, tokenIn } = req.body;
+    const { userId, pairId, amountIn, tokenInId } = req.body;
 
     if (
       userId === undefined ||
       pairId === undefined ||
       amountIn === undefined ||
-      tokenIn === undefined
+      tokenInId === undefined
     ){
       return res.status(400).json({
-        error: "userId, pairId, amountIn, tokenIn required"
+        error: "userId, pairId, amountIn, tokenInId required"
       });
     }
     if (Number(amountIn) <= 0) {
@@ -22,7 +22,7 @@ async function swapTokens(req, res) {
       userId,
       pairId,
       amountIn,
-      tokenIn
+      tokenInId
     );
 
     if (result.error) {
