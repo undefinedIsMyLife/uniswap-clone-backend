@@ -3,7 +3,7 @@ const { Decimal } = require("@prisma/client/runtime/library");
 
 const FEE_RATE = new Decimal("0.003"); // 0.3%
 
-async function executeSwap(userId, pairId, amountIn, tokenIn) {
+async function executeSwap(userId, pairId, amountIn, tokenInId) {
   const amountInDec = new Decimal(amountIn);
 
   if (amountInDec.lte(0)) {
@@ -27,15 +27,17 @@ async function executeSwap(userId, pairId, amountIn, tokenIn) {
     let reserve0 = new Decimal(pair.reserve0);
     let reserve1 = new Decimal(pair.reserve1);
 
-    if (tokenIn === 0) {
+    if (tokenInId === pair.token0Id) {
       reserveIn = reserve0;
       reserveOut = reserve1;
-    } else if (tokenIn === 1) {
+    } else if (tokenInId === pair.token1Id) {
       reserveIn = reserve1;
       reserveOut = reserve0;
     } else {
       return { error: "INVALID_TOKEN_DIRECTION" };
     }
+
+    const priceBefore = reserveIn.div(reserveOut);
 
     // amountIn after fee
     const amountInWithFee = amountInDec.mul(
@@ -49,15 +51,27 @@ async function executeSwap(userId, pairId, amountIn, tokenIn) {
     if (amountOut.lte(0)) {
       return { error: "SWAP_FAILED" };
     }
+    //Execution fees
+    const executionPrice = amountInDec.div(amountOut);
 
-    // Update reserves correctly
-    if (tokenIn === 0) {
-      reserve0 = reserve0.add(amountInDec);
-      reserve1 = reserve1.sub(amountOut);
+    // Update reserves 
+    let newReserveIn, newReserveOut;
+
+    if (tokenInId === pair.token0Id) {
+      newReserveIn = reserve0.add(amountInDec);
+      newReserveOut = reserve1.sub(amountOut);
     } else {
-      reserve1 = reserve1.add(amountInDec);
-      reserve0 = reserve0.sub(amountOut);
+      newReserveIn = reserve1.add(amountInDec);
+      newReserveOut = reserve0.sub(amountOut);
     }
+
+    const priceAfter = newReserveIn.div(newReserveOut);
+    
+    //Calculate slippage
+    const slippage = executionPrice
+    .minus(priceBefore)
+    .div(priceBefore)
+    .mul(100);
 
     const updatedPair = await tx.pair.update({
       where: { id: pairId },
@@ -67,18 +81,35 @@ async function executeSwap(userId, pairId, amountIn, tokenIn) {
       }
     });
 
+    const tokenOutId =
+      tokenInId === pair.token0Id
+        ? pair.token1Id
+        : pair.token0Id;
+
     const swap = await tx.swap.create({
       data: {
         userId,
         pairId,
         amountIn: amountInDec,
         amountOut,
-        tokenInId: tokenIn,
-        tokenOutId: tokenIn === 0 ? 1 : 0
+        tokenInId,
+        tokenOutId
       }
     });
 
-    return { swap, updatedPair };
+
+    return {
+      swap,
+      updatedPair,
+      pricing: {
+      priceBefore: priceBefore.toString(),          // BTC per USD
+      priceBeforeInverted: priceBefore.pow(-1).toString(), // USD per BTC
+      executionPrice: executionPrice.toString(),
+      priceAfter: priceAfter.toString(),
+      slippagePercent: slippage.toFixed(4)
+    }
+   };
+
   });
 }
 
