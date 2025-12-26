@@ -4,7 +4,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon src/index.js",
-    "test": "set NODE_ENV=test && jest --runInBand"
+    "test": "set NODE_ENV=test && jest --runInBand",
+    "seed": "node scripts/seed.js"
   },
   "keywords": [],
   "author": "",
