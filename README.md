@@ -5,7 +5,6 @@
 ![Prisma](https://img.shields.io/badge/Prisma-ORM-purple)
 ![Testing](https://img.shields.io/badge/Testing-Jest-success)
 ![Architecture](https://img.shields.io/badge/Architecture-Clean%20Backend-brightgreen)
-![Status](https://img.shields.io/badge/Status-Production--Ready-green)
 
 A **production-quality backend implementation** of a **Uniswap-style Automated Market Maker (AMM)**.
 
