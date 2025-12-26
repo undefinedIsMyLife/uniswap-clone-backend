@@ -49,7 +49,12 @@ This project demonstrates **protocol-level reasoning, financial correctness, and
 
 ---
 
-## 📂 Architecture Overview
+## 🧱 System Architecture
+
+![AMM Swap Flow](docs/amm-flow.png)
+
+**All financial state transitions are validated in the service layer and committed atomically within a single database transaction.**
+
 src/
 
 ├── controllers/ # Transport layer (HTTP concerns only)
@@ -75,7 +80,11 @@ All financial logic is **isolated, deterministic, and fully testable** inside th
 ---
 
 ## 🧪 Local Development
+> All commands below assume you are inside the `backend/` directory.
 
+```bash
+cd backend
+```
 ### Install dependencies
 
 ```bash
@@ -97,6 +106,18 @@ DATABASE_URL="postgresql://user:password@localhost:5432/amm_test_db"
 npx prisma migrate dev
 npx prisma generate
 ```
+### Database Seeding (Demo Data)
+
+This project includes a seed script to populate the database with:
+- Sample users
+- Tokens
+- A liquidity pair with initial reserves
+
+Run the seed script:
+
+```bash
+npm run seed
+```
 ### Start the server
 ```bash
 npm run dev
@@ -111,7 +132,23 @@ npm test
 ```
 All core AMM invariants are validated via automated tests.
 
-## 📡 API Examples
+## 📖 API Documentation (Swagger)
+
+This project includes **OpenAPI (Swagger) documentation** for all endpoints.
+
+After starting the server locally, access the interactive API docs at:
+
+http://localhost:3000/api-docs
+
+The Swagger UI provides:
+- Request/response schemas
+- Parameter validation
+- Example payloads
+- One-click API testing
+
+
+## 📡 API Examples (Representative)
+
 ### Add Liquidity
 ```http
 POST /liquidity/add
@@ -189,3 +226,42 @@ Built as a **protocol-focused backend engineering project** emphasizing:
 
 - System is designed for extension into on-chain execution
 
+## 🔗 Ethereum Migration Path (Design Notes)
+This project intentionally implements an **off-chain simulation** of an AMM to focus on backend architecture, financial correctness, and protocol logic.
+
+A natural next step is migrating the core AMM logic on-chain while reusing this backend as an **indexing and analytics layer**.
+
+### What Moves On-Chain
+In an Ethereum-based version:
+- AMM logic (swaps, liquidity, reserve updates) would live in a Solidity smart contract
+- The contract would emit events such as:
+  - `Swap`
+  - `LiquidityAdded`
+  - `LiquidityRemoved`
+
+### What This Backend Becomes
+After migration, this backend would:
+- Listen to blockchain events (via ethers.js / viem / The Graph)
+- Index swaps, liquidity changes, and reserve snapshots into a database
+- Serve read-only APIs for:
+  - trade history
+  - price data
+  - analytics
+  - charts
+
+### What Stays the Same
+Much of the current system remains reusable:
+- Database schema (swaps, liquidity, snapshots)
+- Pricing and slippage calculations
+- API layer (read endpoints)
+- Swagger documentation
+- Testing approach
+
+### Separation of Concerns
+This repository deliberately avoids smart contracts to:
+- keep scope focused
+- avoid mixing protocol logic with indexing logic
+
+A full on-chain AMM + indexer is planned as a **separate project**.
+
+This separation mirrors real-world DeFi architectures, where execution occurs on-chain and data aggregation, analytics, and read APIs live off-chain.
